@@ -370,3 +370,11 @@ class State:
                 "Error when sending message: "
                 "No message IDs could be found: {}".format(j)
             )
+
+    async def _uri_share_data(self, data, req_log=None, util_log=None):
+        data['image_height'] = 960
+        data['image_width'] = 960
+        data['__user'] = self.user_id
+        j = await self._post("/message_share_attachment/fromURI/", data, req_log=req_log, util_log=util_log)
+        return j['payload']['share_data']
+

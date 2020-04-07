@@ -1006,6 +1006,45 @@ class Client:
         data.update(message._to_send_data())
         return await self._do_send_request(data)
 
+    async def send_uri(self, uri, message=None, thread_id=None, thread_type=ThreadType.USER):
+        """Send a uri preview to a thread.
+
+        Args:
+            uri: uri to preview
+            message (Message): Message to send
+            thread_id: User/Group ID to send to. See :ref:`intro_threads`
+            thread_type (ThreadType): See :ref:`intro_threads`
+
+        Returns:
+            :ref:`Message ID <intro_message_ids>` of the sent message
+
+        Raises:
+            FBchatException: If request failed
+        """
+
+        url_data = await self._state._uri_share_data({"uri": uri}, req_log=self._req_log, util_log=self._util_log)
+        thread = thread_type._to_class()(thread_id)
+        data = thread._to_send_data()
+        if message is not None:
+            data.update(message._to_send_data())
+        data["action_type"] = "ma-type:user-generated-message"
+        data['shareable_attachment[share_type]'] = url_data['share_type']
+        # most uri params will come back as dict
+        if isinstance(url_data['share_params'], dict):
+            data["has_attachment"] = True
+            for key in url_data['share_params']:
+                if isinstance(url_data['share_params'][key], dict):
+                    for key2 in url_data['share_params'][key]:
+                        data['shareable_attachment[share_params][{}][{}]'.format(key, key2)] = url_data['share_params'][key][key2]
+                else:
+                    data['shareable_attachment[share_params][{}]'.format(key)] = url_data['share_params'][key]
+        # some (such as facebook profile pages) will just be a list
+        else:
+            data["has_attachment"] = False
+            for index, val in enumerate(url_data['share_params']):
+                data['shareable_attachment[share_params][{}]'.format(index)] = val
+        return await self._do_send_request(data)
+
     async def wave(self, wave_first=True, thread_id=None, thread_type=None):
         """Wave hello to a thread.
 
